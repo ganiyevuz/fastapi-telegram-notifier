@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import socket
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 from starlette.requests import Request
 
@@ -18,7 +20,32 @@ from telegram_notifier.utils import (
     get_filtered_headers,
 )
 
+if TYPE_CHECKING:
+    from telegram_notifier.models import ExceptionLog
+
 logger = logging.getLogger("telegram_notifier")
+
+_on_log_created: Callable[[ExceptionLog], Awaitable[None]] | None = None
+
+
+def set_on_log_created(
+    callback: Callable[[ExceptionLog], Awaitable[None]],
+) -> None:
+    """Register an async callback to persist ExceptionLog entries.
+
+    Example::
+
+        from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        async def persist_log(log_entry):
+            async with async_session() as session:
+                session.add(log_entry)
+                await session.commit()
+
+        set_on_log_created(persist_log)
+    """
+    global _on_log_created
+    _on_log_created = callback
 
 
 def _should_report(
@@ -107,11 +134,16 @@ async def _do_report(
     settings = get_settings()
     if settings.store_exceptions:
         try:
-
             from telegram_notifier.models import ExceptionLog
+        except ImportError:
+            logger.error(
+                "telegram_notifier: store_exceptions=True but "
+                "sqlalchemy is not installed. "
+                "Install with: pip install fastapi-telegram-notifier[db]"
+            )
+            return
 
-            # Users must set up engine/session themselves;
-            # we import from a well-known location
+        try:
             log_entry = ExceptionLog(
                 exception_class=exc_class_name,
                 message=exc_message,
@@ -127,10 +159,15 @@ async def _do_report(
                     if hasattr(log_entry, key):
                         setattr(log_entry, key, value)
 
-            logger.info(
-                "telegram_notifier: ExceptionLog prepared "
-                "(user must persist via their own session)"
-            )
+            callback = _on_log_created
+            if callback is not None:
+                await callback(log_entry)
+            else:
+                logger.warning(
+                    "telegram_notifier: ExceptionLog created but "
+                    "no on_log_created callback registered. "
+                    "Use set_on_log_created() to persist logs."
+                )
         except Exception as e:
             logger.error(
                 "telegram_notifier: failed to store: %s", e

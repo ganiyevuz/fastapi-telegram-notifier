@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "fastapi-telegram-notifier"
 version = "0.1.0"
-description = "Catch FastAPI exceptions and send formatted error reports to Telegram"
+description = "Catch unhandled FastAPI exceptions and send formatted error reports to Telegram — like a lightweight Sentry"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -39,6 +39,9 @@ dependencies = [
     "httpx>=0.28.1",
     "pydantic-settings>=2.0.0",
 ]
+
+[project.optional-dependencies]
+db = ["sqlalchemy>=2.0"]
 
 [project.urls]
 Homepage = "https://github.com/ganiyevuz/fastapi-telegram-notifier"

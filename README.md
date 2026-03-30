@@ -5,7 +5,7 @@
 [![FastAPI](https://img.shields.io/badge/fastapi-%3E%3D0.100-teal.svg)](https://pypi.org/project/fastapi-telegram-notifier/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/ganiyevuz/fastapi-telegram-notifier/blob/main/LICENSE)
 
-Catch unhandled FastAPI exceptions and send formatted error reports to Telegram -- like a lightweight Sentry. Includes full traceback as a `.py` file attachment with syntax highlighting, smart exception classification, async-first design, and optional SQLAlchemy logging.
+Catch unhandled FastAPI exceptions and send formatted error reports to Telegram — like a lightweight Sentry. Includes full traceback as a `.py` file attachment with syntax highlighting, smart exception classification, async-first design, and optional SQLAlchemy logging.
 
 ---
 
@@ -32,6 +32,9 @@ Catch unhandled FastAPI exceptions and send formatted error reports to Telegram 
 
 ```bash
 pip install fastapi-telegram-notifier
+
+# With optional SQLAlchemy support for database logging
+pip install fastapi-telegram-notifier[db]
 ```
 
 ### 2. Get a Telegram Bot Token
@@ -254,14 +257,39 @@ The attached `.py` file contains the **complete traceback** with Python syntax h
 
 ## SQLAlchemy Logging (Optional)
 
-An optional `ExceptionLog` SQLAlchemy model is provided for database logging:
+Requires the `db` extra: `pip install fastapi-telegram-notifier[db]`
+
+### Setup
 
 ```python
-from telegram_notifier.models import Base, ExceptionLog
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from telegram_notifier import configure, set_on_log_created, TelegramNotifierSettings
+from telegram_notifier.models import Base
 
-# Create tables (use with your engine)
-Base.metadata.create_all(engine)
+engine = create_async_engine("postgresql+asyncpg://...")
+async_session = async_sessionmaker(engine)
+
+# 1. Create tables
+async with engine.begin() as conn:
+    await conn.run_sync(Base.metadata.create_all)
+
+# 2. Enable storage in settings
+configure(TelegramNotifierSettings(
+    bot_token="...",
+    chat_ids=["..."],
+    store_exceptions=True,
+))
+
+# 3. Register a callback to persist log entries
+async def persist_log(log_entry):
+    async with async_session() as session:
+        session.add(log_entry)
+        await session.commit()
+
+set_on_log_created(persist_log)
 ```
+
+Without calling `set_on_log_created()`, logs are created but not persisted (a warning is logged). If SQLAlchemy is not installed, `store_exceptions=True` is silently ignored with an error log.
 
 ### ExceptionLog Fields
 
@@ -292,7 +320,7 @@ Base.metadata.create_all(engine)
 ```python
 from telegram_notifier import (
     # Core
-    report_exception,                  # Report an exception (async)
+    report_exception,                  # Report an exception (async, fire-and-forget)
     notify_error_via_telegram,         # Send message to Telegram (async)
     notify_error_via_telegram_sync,    # Send message to Telegram (sync)
     classify_exception,                # Get (level, severity) for an exception
@@ -309,8 +337,11 @@ from telegram_notifier import (
     configure,                         # Set settings programmatically
     get_settings,                      # Get current settings
 
-    # Models & choices
+    # Database logging (requires `pip install fastapi-telegram-notifier[db]`)
+    set_on_log_created,                # Register async callback to persist ExceptionLog
     ExceptionLog,                      # SQLAlchemy model (lazy-loaded)
+
+    # Enums
     Level,                             # debug, info, warning, error, critical
     Severity,                          # low, moderate, high, critical
     Status,                            # new, seen, resolved, ignored
@@ -325,7 +356,7 @@ from telegram_notifier import (
 - FastAPI >= 0.100.0
 - httpx >= 0.28.1
 - pydantic-settings >= 2.0.0
-- SQLAlchemy >= 2.0 (optional, for database logging)
+- SQLAlchemy >= 2.0 (optional — install with `pip install fastapi-telegram-notifier[db]`)
 
 ---
 

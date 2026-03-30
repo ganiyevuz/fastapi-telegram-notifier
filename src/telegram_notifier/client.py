@@ -20,6 +20,20 @@ TELEGRAM_SEND_DOCUMENT_URL = (
 CAPTION_MAX_LENGTH = 1024
 
 
+def _make_traceback_filename(traceback_content: str) -> str:
+    """Build a filename from the last line of the traceback."""
+    timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
+    lines = traceback_content.strip().splitlines()
+    exc_class = "Exception"
+    if lines:
+        last_line = lines[-1]
+        first_part = last_line.split(":", 1)[0]
+        name = first_part.rsplit(".", 1)[-1]
+        if name.isidentifier():
+            exc_class = name
+    return f"traceback_{exc_class}_{timestamp}.py"
+
+
 async def notify_error_via_telegram(
     message: str,
     traceback_content: str | None = None,
@@ -111,13 +125,7 @@ async def _send_document_with_caption(
     traceback_content: str,
     proxy: str | None,
 ) -> None:
-    timestamp = datetime.now(tz=UTC).strftime(
-        "%Y%m%d_%H%M%S"
-    )
-    last_line = traceback_content.strip().splitlines()[-1]
-    exc_class = last_line.split(":")[0].split(".")[-1]
-    filename = f"traceback_{exc_class}_{timestamp}.py"
-
+    filename = _make_traceback_filename(traceback_content)
     file_bytes = io.BytesIO(traceback_content.encode("utf-8"))
     url = TELEGRAM_SEND_DOCUMENT_URL.format(token=token)
     data = {
@@ -136,13 +144,7 @@ def _send_document_with_caption_sync(
     traceback_content: str,
     proxy: str | None,
 ) -> None:
-    timestamp = datetime.now(tz=UTC).strftime(
-        "%Y%m%d_%H%M%S"
-    )
-    last_line = traceback_content.strip().splitlines()[-1]
-    exc_class = last_line.split(":")[0].split(".")[-1]
-    filename = f"traceback_{exc_class}_{timestamp}.py"
-
+    filename = _make_traceback_filename(traceback_content)
     file_bytes = io.BytesIO(traceback_content.encode("utf-8"))
     url = TELEGRAM_SEND_DOCUMENT_URL.format(token=token)
     data = {
@@ -165,7 +167,7 @@ async def _async_post(
         response = await client.post(
             url, data=data, files=files, timeout=3
         )
-    response.raise_for_status()
+        response.raise_for_status()
 
 
 def _sync_post(
@@ -180,8 +182,9 @@ def _sync_post(
             response = client.post(
                 url, data=data, files=files, timeout=3
             )
+            response.raise_for_status()
     else:
         response = httpx.post(
             url, data=data, files=files, timeout=3
         )
-    response.raise_for_status()
+        response.raise_for_status()

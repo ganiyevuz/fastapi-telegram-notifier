@@ -16,14 +16,21 @@ from telegram_notifier.message import (
     build_traceback_content,
 )
 from telegram_notifier.middleware import TelegramExceptionMiddleware
-from telegram_notifier.report import report_exception
+from telegram_notifier.report import report_exception, set_on_log_created
 
 __version__ = "0.1.0"
 
 
 def __getattr__(name: str) -> type:
     if name == "ExceptionLog":
-        from telegram_notifier.models import ExceptionLog
+        try:
+            from telegram_notifier.models import ExceptionLog
+        except ImportError as e:
+            msg = (
+                "ExceptionLog requires sqlalchemy. "
+                "Install with: pip install fastapi-telegram-notifier[db]"
+            )
+            raise ImportError(msg) from e
 
         globals()["ExceptionLog"] = ExceptionLog
         return ExceptionLog
@@ -45,5 +52,6 @@ __all__ = [
     "build_traceback_content",
     "TelegramExceptionMiddleware",
     "report_exception",
+    "set_on_log_created",
     "ExceptionLog",
 ]

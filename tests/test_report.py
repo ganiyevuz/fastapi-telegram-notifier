@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from starlette.requests import Request
 
@@ -13,6 +13,12 @@ from telegram_notifier.report import (
     _should_report,
     report_exception,
 )
+
+
+def _closing_create_task(coro):
+    """Mock create_task that closes the coroutine to avoid warnings."""
+    coro.close()
+    return MagicMock()
 
 
 def _make_request(
@@ -165,7 +171,8 @@ class TestExtractRequestData:
 class TestReportException:
     async def test_report_returns_true(self) -> None:
         with patch(
-            "telegram_notifier.report.asyncio.create_task"
+            "telegram_notifier.report.asyncio.create_task",
+            side_effect=_closing_create_task,
         ):
             result = await report_exception(
                 ValueError("test")
@@ -191,7 +198,8 @@ class TestReportException:
 
     async def test_report_creates_task(self) -> None:
         with patch(
-            "telegram_notifier.report.asyncio.create_task"
+            "telegram_notifier.report.asyncio.create_task",
+            side_effect=_closing_create_task,
         ) as mock_task:
             await report_exception(ValueError("test"))
 
@@ -202,7 +210,8 @@ class TestReportException:
             path="/api/test", method="POST"
         )
         with patch(
-            "telegram_notifier.report.asyncio.create_task"
+            "telegram_notifier.report.asyncio.create_task",
+            side_effect=_closing_create_task,
         ):
             result = await report_exception(
                 ValueError("test"),
@@ -214,7 +223,8 @@ class TestReportException:
 
     async def test_report_with_custom_level(self) -> None:
         with patch(
-            "telegram_notifier.report.asyncio.create_task"
+            "telegram_notifier.report.asyncio.create_task",
+            side_effect=_closing_create_task,
         ) as mock_task:
             await report_exception(
                 ValueError("test"),
