@@ -17,7 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
-        django-version: ["5.2", "6.0"]
 
     steps:
       - uses: actions/checkout@v4
@@ -32,11 +31,7 @@ jobs:
         run: uv python install "$PYTHON_VERSION"
 
       - name: Install dependencies
-        env:
-          DJANGO_VERSION: "${{ matrix.django-version }}"
-        run: |
-          uv sync --group dev
-          uv pip install "Django~=${DJANGO_VERSION}.0"
+        run: uv sync --group dev
 
       - name: Lint
         run: uv run ruff check .
