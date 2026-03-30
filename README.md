@@ -360,6 +360,24 @@ from telegram_notifier import (
 
 ---
 
+## Example Project
+
+A runnable example is included in the `example/` directory:
+
+```bash
+cd example
+cp ../.env.example .env   # fill in TN_BOT_TOKEN and TN_CHAT_IDS
+uvicorn app:app --reload
+```
+
+Then visit:
+- `http://localhost:8000/` — 200 OK
+- `http://localhost:8000/error` — triggers `ValueError`, sends Telegram notification
+- `http://localhost:8000/timeout` — triggers `TimeoutError` (classified as high severity)
+- `http://localhost:8000/health` — ignored by the notifier (configured in `ignore_paths`)
+
+---
+
 ## Development
 
 ```bash

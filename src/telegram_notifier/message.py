@@ -6,16 +6,17 @@ from datetime import UTC, datetime
 
 from starlette.requests import Request
 
+from telegram_notifier.choices import Level
 from telegram_notifier.config import get_settings
 
 TRACEBACK_PREVIEW_LINES = 5
 
 LEVEL_EMOJI: dict[str, str] = {
-    "debug": "\u26aa",
-    "info": "\U0001f535",
-    "warning": "\U0001f7e1",
-    "error": "\U0001f534",
-    "critical": "\u26d4",
+    Level.DEBUG: "\u26aa",
+    Level.INFO: "\U0001f535",
+    Level.WARNING: "\U0001f7e1",
+    Level.ERROR: "\U0001f534",
+    Level.CRITICAL: "\u26d4",
 }
 
 
@@ -28,7 +29,7 @@ def build_exception_message(
     exc: BaseException,
     request: Request | None = None,
     body: bytes | None = None,
-    level: str = "error",
+    level: str = Level.ERROR,
 ) -> str:
     """Build a formatted HTML message for Telegram."""
     settings = get_settings()

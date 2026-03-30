@@ -14,6 +14,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.sql import func
 
+from telegram_notifier.choices import Level, Severity, Status
+
 
 class Base(DeclarativeBase):
     pass
@@ -26,9 +28,9 @@ class ExceptionLog(Base):
     exception_class = Column(String(255), index=True)
     message = Column(Text)
     traceback = Column(Text)
-    level = Column(String(10), default="error")
-    severity = Column(String(10), default="high")
-    status = Column(String(10), default="new", index=True)
+    level = Column(String(10), default=Level.ERROR)
+    severity = Column(String(10), default=Severity.HIGH)
+    status = Column(String(10), default=Status.NEW, index=True)
     path = Column(String(500), default="")
     method = Column(String(10), default="")
     query_params = Column(SAJson, default=dict)
