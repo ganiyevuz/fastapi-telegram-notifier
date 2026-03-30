@@ -7,13 +7,13 @@ Run:
 Then visit:
     http://localhost:8000/         -> 200 OK
     http://localhost:8000/error    -> triggers ValueError, sends Telegram notification
-    http://localhost:8000/timeout  -> triggers TimeoutError (classified as high severity)
+    http://localhost:8000/timeout  -> triggers TimeoutError (high severity)
 """
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
